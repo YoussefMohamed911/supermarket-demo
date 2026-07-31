@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 11%;
+  --border: 150 12% 88%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  background-color: #f4f7f5;
+  color: #1b1b1b;
+  font-feature-settings: "ss01" on, "ss02" on;
+}
+
+/* Mashrabiya signature pattern — repeating octagon lattice, low opacity.
+   Used only in the hero banner as the page's one visual signature. */
+.mashrabiya-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='1.4' stroke-opacity='0.22'%3E%3Cpath d='M42 2 L64 12 L74 34 L74 50 L64 72 L42 82 L20 72 L10 50 L10 34 L20 12 Z'/%3E%3Cpath d='M42 20 L54 26 L58 38 L54 50 L42 56 L30 50 L26 38 L30 26 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 84px 84px;
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #1f3d68 0%, #2c5389 55%, #4a72ac 100%);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
