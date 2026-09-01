@@ -1,33 +1,37 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { products as staticProducts, findMainCategory, type Product } from "@/lib/mock-data";
 import { getCustomProducts, subscribeToProductUpdates } from "@/lib/product-store";
 
 export function useAllProducts(): Product[] {
-  const [all, setAll] = useState<Product[]>(() => [
-    ...staticProducts,
-    ...getCustomProducts(),
-  ]);
+  const [custom, setCustom] = useState<Product[]>([]);
 
   useEffect(() => {
-    const refresh = () => setAll([...staticProducts, ...getCustomProducts()]);
-    return subscribeToProductUpdates(refresh);
+    let active = true;
+    const refresh = () => {
+      getCustomProducts().then((products) => {
+        if (active) setCustom(products);
+      });
+    };
+    refresh();
+    const unsubscribe = subscribeToProductUpdates(refresh);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
-  return all;
+  return [...staticProducts, ...custom];
 }
 
 export function useProductById(id: string): Product | undefined {
   return useAllProducts().find((p) => p.id === id);
 }
 
-/** Products whose categorySlug matches this exact subcategory. */
 export function useProductsBySubcategory(slug: string): Product[] {
   return useAllProducts().filter((p) => p.categorySlug === slug);
 }
 
-/** All products across every subcategory under a given main category. */
 export function useProductsByMainCategory(mainSlug: string): Product[] {
   const all = useAllProducts();
   const main = findMainCategory(mainSlug);
