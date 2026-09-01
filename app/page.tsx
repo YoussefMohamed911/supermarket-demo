@@ -13,8 +13,7 @@ export default function HomePage() {
   const allProducts = useAllProducts();
   const offers = allProducts.filter((p) => p.hasOffer);
   // Deterministic "best sellers" stand-in: every 4th product, 10 items.
-  const bestSellers = allProducts.filter((_, i) => i % 4 === 0).slice(0, 10);
-
+const bestSellers = allProducts.filter((p) => p.isBestSeller);
   return (
     <>
       <SiteHeader />
