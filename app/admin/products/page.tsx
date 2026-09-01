@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trash2, Plus, ImagePlus, X } from "lucide-react";
 import { categories, findSubcategory } from "@/lib/mock-data";
@@ -20,7 +20,8 @@ const emptyForm = {
   compareAtPrice: "",
   unit: "",
   description: "",
-  image: "", // base64 data URL from the chosen file, or empty for no photo
+  image: "",
+  isBestSeller: false,
 };
 
 export default function AdminProductsPage() {
@@ -28,10 +29,16 @@ export default function AdminProductsPage() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [customIds, setCustomIds] = useState<Set<string>>(new Set());
 
-  const customIds = new Set(getCustomProducts().map((p) => p.id));
+  useEffect(() => {
+    getCustomProducts().then((products) => {
+      setCustomIds(new Set(products.map((p) => p.id)));
+    });
+  }, [allProducts]);
 
-  function handleChange(field: keyof typeof form, value: string) {
+  function handleChange(field: keyof typeof form, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
@@ -64,11 +71,10 @@ export default function AdminProductsPage() {
     setImageError(null);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-  
     if (!form.name.trim() || !form.price || !form.unit.trim()) {
       setError("لازم تملى الاسم والسعر والوحدة على الأقل.");
       return;
@@ -82,19 +88,26 @@ export default function AdminProductsPage() {
       return;
     }
 
-    addCustomProduct({
-      id: newProductId(),
-      name: form.name.trim(),
-      categorySlug: form.categorySlug,
-      price,
-      compareAtPrice,
-      unit: form.unit.trim(),
-      description: form.description.trim() || "منتج من Moamen & Bashar.",
-      image: form.image || undefined,
-      emoji: "🛒",
-    });
-
-    setForm(emptyForm);
+    setSubmitting(true);
+    try {
+      await addCustomProduct({
+        id: newProductId(),
+        name: form.name.trim(),
+        categorySlug: form.categorySlug,
+        price,
+        compareAtPrice,
+        unit: form.unit.trim(),
+        description: form.description.trim() || "منتج من Moamen & Bashar.",
+        image: form.image || undefined,
+        emoji: "🛒",
+        isBestSeller: form.isBestSeller,
+      });
+      setForm(emptyForm);
+    } catch {
+      setError("حصلت مشكلة في حفظ المنتج، حاول تاني.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -111,7 +124,6 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
-      {/* Add product form */}
       <form
         onSubmit={handleSubmit}
         className="mb-10 grid gap-4 rounded-xl border border-ink/10 bg-surface p-5 sm:grid-cols-2"
@@ -177,7 +189,19 @@ export default function AdminProductsPage() {
           />
         </div>
 
-        {/* Photo picker */}
+        <div className="sm:col-span-2 flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="isBestSeller"
+            checked={form.isBestSeller}
+            onChange={(e) => handleChange("isBestSeller", e.target.checked)}
+            className="h-4 w-4"
+          />
+          <label htmlFor="isBestSeller" className="text-sm font-bold text-ink">
+            منتج مميز (يظهر في قسم "الأكثر مبيعًا")
+          </label>
+        </div>
+
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-bold text-ink">صورة المنتج (اختياري)</label>
 
@@ -233,14 +257,14 @@ export default function AdminProductsPage() {
 
         <button
           type="submit"
-          className="flex items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-extrabold text-primary-foreground transition-colors hover:bg-primary-dark sm:col-span-2"
+          disabled={submitting}
+          className="flex items-center justify-center gap-2 rounded-full bg-primary py-2.5 text-sm font-extrabold text-primary-foreground transition-colors hover:bg-primary-dark disabled:opacity-60 sm:col-span-2"
         >
           <Plus className="h-4 w-4" />
-          إضافة المنتج
+          {submitting ? "بيتم الحفظ..." : "إضافة المنتج"}
         </button>
       </form>
 
-      {/* Product list */}
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-extrabold text-ink">
           كل المنتجات ({allProducts.length})
@@ -248,9 +272,9 @@ export default function AdminProductsPage() {
         {allProducts.length > 0 && (
           <button
             type="button"
-            onClick={() => {
-              if (confirm("متأكد إنك عايز تمسح كل المنتجات المضافة يدويًا من المتصفح ده؟")) {
-                clearAllCustomProducts();
+            onClick={async () => {
+              if (confirm("متأكد إنك عايز تمسح كل المنتجات المضافة يدويًا؟")) {
+                await clearAllCustomProducts();
               }
             }}
             className="flex items-center gap-1.5 text-xs font-bold text-ink-muted transition-colors hover:text-red-600"
@@ -329,7 +353,7 @@ export default function AdminProductsPage() {
       </div>
 
       <p className="mt-4 text-xs text-ink-muted">
-        ملحوظة: المنتجات وصورها دلوقتي متخزنة في متصفحك بس (localStorage) — مؤقت لحد ما نربط قاعدة بيانات وتخزين حقيقي (Supabase) فتبقى المنتجات والصور متزامنة لكل زوار الموقع. برضو المتصفح بيحط حد أقصى لحجم التخزين، فلو ضفت صور كتير جدًا ممكن تحتاج تشيل قديم عشان تضيف جديد.
+        المنتجات وصورها دلوقتي متخزنة في قاعدة بيانات حقيقية (Supabase) — متزامنة لكل زوار الموقع.
       </p>
     </main>
   );
