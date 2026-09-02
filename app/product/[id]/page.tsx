@@ -14,12 +14,25 @@ import { ProductImage } from "@/components/product-image";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
-  const product = useProductById(params.id);
+  const { product, loading } = useProductById(params.id);
   const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const { addToCart } = useCart();
 
-  if (!product) notFound();
+  if (!product) {
+    if (loading) {
+      return (
+        <>
+          <SiteHeader />
+          <main className="mx-auto max-w-4xl px-4 py-16 text-center text-ink-muted">
+            جاري تحميل المنتج...
+          </main>
+          <SiteFooter />
+        </>
+      );
+    }
+    notFound();
+  }
 
   function handleAddToCart() {
     addToCart(product!.id, qty);
