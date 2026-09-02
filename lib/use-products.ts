@@ -3,14 +3,18 @@ import { useEffect, useState } from "react";
 import { products as staticProducts, findMainCategory, type Product } from "@/lib/mock-data";
 import { getCustomProducts, subscribeToProductUpdates } from "@/lib/product-store";
 
-export function useAllProducts(): Product[] {
+function useAllProductsState(): { products: Product[]; loading: boolean } {
   const [custom, setCustom] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     const refresh = () => {
       getCustomProducts().then((products) => {
-        if (active) setCustom(products);
+        if (active) {
+          setCustom(products);
+          setLoading(false);
+        }
       });
     };
     refresh();
@@ -21,11 +25,16 @@ export function useAllProducts(): Product[] {
     };
   }, []);
 
-  return [...staticProducts, ...custom];
+  return { products: [...staticProducts, ...custom], loading };
 }
 
-export function useProductById(id: string): Product | undefined {
-  return useAllProducts().find((p) => p.id === id);
+export function useAllProducts(): Product[] {
+  return useAllProductsState().products;
+}
+
+export function useProductById(id: string): { product: Product | undefined; loading: boolean } {
+  const { products, loading } = useAllProductsState();
+  return { product: products.find((p) => p.id === id), loading };
 }
 
 export function useProductsBySubcategory(slug: string): Product[] {
